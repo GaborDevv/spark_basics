@@ -86,21 +86,15 @@ def main():
     hotel_df = spark.read.format(file_type).option("header", "true").schema(hotel_schema).load(file_location)
 
     # Check Latitude and Longitude columns in the hotel dataframe and update it if not valid
-    hotel_df = hotel_df.withColumn("Latitude",
-                                   when(is_not_number(col("Latitude")) | col("Latitude").isNull(),
-                                        get_latitude_udf(col("Country"),
-                                                         col("City"),
-                                                         col("Address"))
-                                        ).otherwise(col("Latitude"))
-                                   )
+    hotel_df = hotel_df.withColumn("Latitude", when(is_not_number(col("Latitude")) | col("Latitude").isNull(),
+                                                    get_latitude_udf(col("Country"),
+                                                                     col("City"),
+                                                                     col("Address"))).otherwise(col("Latitude")))
 
-    hotel_df = hotel_df.withColumn("Longitude",
-                                   when(is_not_number(col("Longitude")) | col("Longitude").isNull(),
-                                        get_longitude_udf(col("Country"),
-                                                          col("City"),
-                                                          col("Address"))
-                                        ).otherwise(col("Longitude")),
-                                   )
+    hotel_df = hotel_df.withColumn("Longitude", when(is_not_number(col("Longitude")) | col("Longitude").isNull(),
+                                                     get_longitude_udf(col("Country"),
+                                                                       col("City"),
+                                                                       col("Address"))).otherwise(col("Longitude")))
 
     # generate Geohash column
     hotel_df = hotel_df.withColumn(
@@ -113,26 +107,20 @@ def main():
     weather_df = spark.read.format(weather_files_type).option("header", "true").option("inferSchema", "true").load(
         weather_files_location)
     # create Geohash column
-    weather_df = weather_df.withColumn(
-        "Geohash",
-        when(
-            (col("lat").isNull()) | (col("lng").isNull()),
-            "NaN"
-        ).otherwise(encode_udf(col("lat"), col("lng")))
-    )
+    weather_df = weather_df.withColumn("Geohash", when((col("lat").isNull()) | (col("lng").isNull()), "NaN")
+                                       .otherwise(encode_udf(col("lat"), col("lng"))))
     # dropping duplicated data
     weather_df = weather_df.drop("lat", "lng")
     # left join hotel data and weather data
     result_df = weather_df.join(hotel_df, "Geohash", "left")
-
     # create variables to config spark to connect to datalake
     storage_account_name2 = "stgabordevvwesteurope"
     storage_account_access_key2 = "ia4K+6SaKozCtW+KD1mpRbVn+tplzwYGO8otsIFSn/APZV3XbUtGH0HW7CIZRuCsE600Ta5xZFOE+ASt3UM9YA=="
-
     spark.conf.set(f"fs.azure.account.key.{storage_account_name2}.dfs.core.windows.net", storage_account_access_key2)
+    # writing results to azure gen 2 datalake
     write_location = f"abfss://data@{storage_account_name2}.dfs.core.windows.net/"
-    # writing data to azure gen 2 datalake
-    result_df.write.format("parquet").mode("overwrite").partitionBy("year", "month", "day").save(write_location + "/results")
+    result_df.write.format("parquet").mode("overwrite").partitionBy("year", "month", "day").save(
+        write_location + "/results")
     spark.stop()
 
 
