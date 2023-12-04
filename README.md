@@ -1,11 +1,4 @@
 * Deployed infrastructure with terraform (added credentials, in the resource "azurerm_kubernetes_cluster" "bdcc" block, changed default node pool's vm size from "Standard_D2_v2" to "Standard_D3_v2")
-```
-terraform init
-terraform plan -out terraform.plan
-terraform apply terraform.plan
-....
-terraform destroy
-```
 * Launched AKS
 * Created a service account that has sufficient permissions for running a job
 * Ran proxy
